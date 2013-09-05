@@ -1,0 +1,68 @@
+
+Usage:
+
+ss = Goodsheet::Spreadsheet.new("data.xls")
+ss.sheet(0) # selecting the first sheet
+result = ss.read(:skip => 1) do
+  column_at 0, :year, :presence => true, :numericality => { :only_integer => false, :greater_than_or_equal_to => 2000, :less_than_or_equal_to => 2100 }
+end
+result.values # => { :year => [2012, 2012, 2012, 2013] }
+
+# when the validation fails:
+ss.sheet(1) # selecting the second sheet
+result = ss.read(:skip => 1) do
+  column_at 0, :year, :presence => true, :numericality => { :only_integer => false, :greater_than_or_equal_to => 2000, :less_than_or_equal_to => 2100 }
+end
+
+result.values # => {}
+result.valid? # => false
+result.errors # => return an array of ValidationError objects
+
+# --------------------
+
+ss = Goodsheet::Spreadsheet.new("data.xls")
+ss.sheets # => ["Sheet1", "Sheet2"]
+ss.sheet(0) # selecting the first sheet
+ss.name # => "Sheet1"
+ss.sheet("Sheet1") # alternative way to select a sheet (by name)
+ss.sheet("Sheet1", :header_row => 1) # you can specify the row index (0-based) used for header
+
+
+Validation
+
+
+class MyRow < Row
+  attr_accessor :year
+  validates :year, :presence => true, :numericality => { :only_integer => false, :greater_than_or_equal_to => 2000, :less_than_or_equal_to => 2100 }
+end
+
+The validation method will return an array of validation errors:
+validation_errors = ss.validate do |row|
+  MyRow.new(:year => row[0])
+end
+
+You can limit the validation errors using :max_errors option:
+ss.validate(:max_errors => 100) do |row|
+  # ...
+end
+
+or limit the numbers of rows to read:
+ss.validate(:limit => 50) do |row|
+  # ...
+end
+
+
+Reading 
+
+The read method allow to validate and put the content in an hash:
+values = @ss.read do |row|
+  MyRow.new(:year => row[0])
+end
+
+# => 
+
+The :force_nil option allow to force empties cells to a value, and the :skip to skip a desired number of rows:
+values = @ss.read(:force_nil => 0.0, :skip => 6) do |row|
+  MyRow.new(:year => row[0])
+end
+

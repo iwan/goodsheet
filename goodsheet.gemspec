@@ -1,0 +1,27 @@
+# coding: utf-8
+lib = File.expand_path('../lib', __FILE__)
+$LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
+require 'goodsheet/version'
+
+Gem::Specification.new do |spec|
+  spec.name          = "goodsheet"
+  spec.version       = Goodsheet::VERSION
+  spec.authors       = ["Iwan Buetti"]
+  spec.email         = ["iwan.buetti@gmail.com"]
+  spec.description   = "Little gem that take advantage of Roo gem and Rails ActiveModel validation methods to read and validate the content of a spreadsheet"
+  spec.summary       = "Extract and validate data from a spreadsheet"
+  spec.homepage      = "https://github.com/iwan/goodsheet"
+  spec.license       = "MIT"
+  spec.date          = '2013-07-19'
+  spec.files         = `git ls-files`.split($/)
+  spec.executables   = spec.files.grep(%r{^bin/}) { |f| File.basename(f) }
+  spec.test_files    = spec.files.grep(%r{^(test|spec|features)/})
+  spec.require_paths = ["lib"]
+
+  spec.add_development_dependency "bundler", "~> 1.4"
+  spec.add_development_dependency "rake"
+
+  spec.add_dependency('roo', '>= 1.12.1') # https://github.com/Empact/roo
+  spec.add_dependency('activemodel', '>= 3.2.14')
+  spec.add_dependency('google-drive-ruby')
+end
