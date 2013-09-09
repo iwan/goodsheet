@@ -104,6 +104,27 @@ class TestSpreadsheet_01 < Test::Unit::TestCase
     assert_equal(3, validation_errors.size) 
   end
 
+  def test_size
+    assert_equal(4, @ss.size)
+  end
+
+  def test_options_precedence
+    assert_equal({:skip=>1, :header_row=>0, :max_errors=>0, :row_limit=>0, :force_nil=>nil}, @ss.options)
+
+    # select "Sheet4" and change option
+    @ss.sheet(3, :force_nil => 0.0)
+    assert_equal({:skip=>1, :header_row=>0, :max_errors=>0, :row_limit=>0, :force_nil=>0.0}, @ss.options)
+
+    # reselect "Sheet1" and change option
+    @ss.sheet(0)
+    assert_equal({:skip=>1, :header_row=>0, :max_errors=>0, :row_limit=>0, :force_nil=>nil}, @ss.options)
+
+    # now validate with new options, but the sheet option must be unchanged
+    result = @ss.validate(:force_nil => 0.0, :skip => 6) do
+      # none
+    end
+    assert_equal({:skip=>1, :header_row=>0, :max_errors=>0, :row_limit=>0, :force_nil=>nil}, @ss.options)
+  end
 
   def test_read_sheet4
     @ss.sheet(3)

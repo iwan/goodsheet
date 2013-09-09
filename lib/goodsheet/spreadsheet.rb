@@ -3,82 +3,151 @@ require 'roo'
 module Goodsheet
 
   class Spreadsheet < Roo::Spreadsheet
-    attr_reader :time_zone, :skip, :header_row, :max_errors, :row_limit
+    attr_reader :skip, :header_row, :max_errors, :row_limit
+    attr_reader :s_opts
 
-    # Valid options:
-    #    :skip       : number of rows to skip (default: 1)
-    #    :header_row : header's row index (0 based, default: 0)
-    #    :time_zone  : time zone string
+    # Initialize a Goodsheet object. The first sheet will be selected.
+    #
+    # @param filename [String] The spreadsheet filename you want to read
+    # @param [Hash] options Options to define the behaviour on reading and validation the sheets. These options are applied to all sheets, but can be overwritten by similar options when selecting the sheet or calling +read+ or +validate+ method
+    # @option options [Fixnum] :skip (1) Number of rows to skip
+    # @option options [Fixnum] :header_row (0) The header row index (0-based)
+    # @option options [Fixnum] :max_errors (0) Max number of error until stop validation
+    # @option options [Fixnum] :row_limit (0) Max number of row to read
+    # @option options [Object] :force_nil (nil) Force nils found to this value
     def initialize(filename, options={})
-      set_options(options)
+      # set_book_options(options)
       @filename = filename
       @ss = Roo::Spreadsheet.open(filename, options)
+      @s_opts = Array.new(size, {})
+      size.times do |i|
+        set_sheet_options(i, options)
+      end
     end
     
 
-    # idx can be a number or a string
+    # Select the desidered sheet.
+    #
+    # @param idx [Fixnum, String] The index (0-based) or the name of the sheet to select
+    # @param [Hash] options Options to define the behaviour on reading and validation the sheet. These options are applied only to the current sheet, but can be overwritten by similar options when calling +read+ or +validate+ method
+    # @option options [Fixnum] :skip (1) Number of rows to skip
+    # @option options [Fixnum] :header_row (0) The header row index (0-based)
+    # @option options [Fixnum] :max_errors (0) Max number of error until stop validation
+    # @option options [Fixnum] :row_limit (0) Max number of row to read
+    # @option options [Object] :force_nil (nil) Force nils found to this value
     def sheet(idx, options={})
-      set_options(options)
+      check_sheet_exists(idx)
       @ss.sheet(idx)
-      check_sheet_exists
+      set_sheet_options(idx, options)
     end
 
+    # Get the sheet names list
+    #
+    # @return [Array<String>] An array with sheet names.
     def sheets
       @ss.sheets
     end
 
-
-    def get_header
-      @ss.row(@header_row+1) # because roo in 1-based
+    # Get the number of sheets
+    #
+    # @return [Fixnum] Number of sheets.
+    def size
+      @ss.sheets.size
     end
 
-    # Get the currently selected sheet's name
+    # Get the options of current sheet
+    #
+    # @return [Fixnum] Number of sheets.
+    def options
+      @s_opts[index]
+    end
+
+
+    # Get the header row of the currently selected sheet
+    #
+    # @return [Array<Object>] An array cell content objects (String, Float, ...)
+    def get_header
+      @ss.row(@s_opts[index][:header_row]+1) # because roo in 1-based
+    end
+
+    # Get the name of current (default) sheet
+    #
+    # @return [String] The sheet name
     def name
       @ss.default_sheet
     end
 
+    # Get the index of current (default) sheet
+    #
+    # @return [Fixnum] The sheet index
+    def index
+      @ss.sheets.index(@ss.default_sheet)
+    end
+
+    # Get the total number of rows (of the currently selected sheet)
+    #
+    # @return [Fixnum] The number of rows
     def total_rows
       @ss.parse.size
     end
 
-    def rows_wo_header
-      @ss.parse.size - @skip
+    # Get the number of all rows minus the skipped ones (of the currently selected sheet)
+    #
+    # @return [Fixnum] The number of rows
+    def rows_wo_skipped
+      @ss.parse.size - @s_opts[index][:skip]
     end
-    alias :rows :rows_wo_header
+    alias :rows :rows_wo_skipped
 
-    # Valid options:
-    #    :max_errors   : The validation will be stopped if the number of errors exceed max_errors (default: 0 or don't stop)
-    #    :limit        : Max number of rows to validate (default: 0 or validate all rows)
-
-    # 
+    # Validate the current sheet.
+    #
+    # @param [Hash] options Validation options for the current sheet. 
+    # @option options [Fixnum] :skip (1) Number of rows to skip
+    # @option options [Fixnum] :header_row (0) The header row index (0-based)
+    # @option options [Fixnum] :max_errors (0) Max number of error until stop validation
+    # @option options [Fixnum] :row_limit (0) Max number of row to read
+    # @option options [Object] :force_nil (nil) Force nils found to this value
+    # @yield Column settings and validation rules
+    # @return [ValidationErrors] Validation errors
     def validate(options={}, &block)
-      skip = options[:skip] || @skip
-      header_row = options[:header_row] || @header_row
-      max_errors = options[:max_errors] || @max_errors
-      row_limit = options[:row_limit] || @row_limit
+      # set_current_sheet_options(options)
+      skip = options[:skip] || @s_opts[index][:skip]
+      header_row = options[:header_row] || @s_opts[index][:header_row]
+      max_errors = options[:max_errors] || @s_opts[index][:max_errors]
+      row_limit = options[:row_limit] || @s_opts[index][:row_limit]
+      force_nil = options[:force_nil] || @s_opts[index][:force_nil]
 
       validation_errors = ValidationErrors.new
 
       my_class = options[:my_custom_row_class] || build_my_class(block)
 
-      line = skip # 0-based, from the top
-      @ss.parse[skip..-1].each do |row| # row is an array of elements
+      line = @s_opts[index][:skip] # 0-based, from the top
+      @ss.parse[@s_opts[index][:skip]..-1].each do |row| # row is an array of elements
         validation_errors.add(line, my_class.new(row))
         break if max_errors>0 && validation_errors.size >= max_errors
-        break if row_limit && row_limit>0 && line>=(row_limit+skip-1)
+        break if row_limit && row_limit>0 && line>=(row_limit+@s_opts[index][:skip]-1)
         line +=1
       end
       validation_errors
     end
 
 
-    # Columns must be an hash: labe for values and the column index like {:price => 5}
+    # Validate and, if successful, read the current sheet.
+    #
+    # @param [Hash] options Reading and validation options for the current sheet. 
+    # @option options [Fixnum] :skip (1) Number of rows to skip
+    # @option options [Fixnum] :header_row (0) The header row index (0-based)
+    # @option options [Fixnum] :max_errors (0) Max number of error until stop validation
+    # @option options [Fixnum] :row_limit (0) Max number of row to read
+    # @option options [Object] :force_nil (nil) Force nils found to this value
+    # @yield Column settings and validation rules
+    # @return [ReadResult] The result
     def read(options={}, &block)
-      skip = options[:skip] || @skip
-      header_row = options[:header_row] || @header_row
-      max_errors = options[:max_errors] || @max_errors
-      row_limit = options[:row_limit] || @row_limit
-      force_nil = options[:force_nil]
+      skip = options[:skip] || @s_opts[index][:skip]
+      header_row = options[:header_row] || @s_opts[index][:header_row]
+      max_errors = options[:max_errors] || @s_opts[index][:max_errors]
+      row_limit = options[:row_limit] || @s_opts[index][:row_limit]
+      force_nil = options[:force_nil] || @s_opts[index][:force_nil]
 
       my_class = build_my_class(block)
       options[:my_custom_row_class] = my_class
@@ -103,13 +172,21 @@ module Goodsheet
       Object.const_set get_custom_row_class_name, Row.inherit(block)
     end
 
-    def check_sheet_exists
-      begin
-        @ss.cell(1,1)
-      rescue ArgumentError => e
-        raise Goodsheet::SheetNotFoundError
-      rescue RangeError => e
-        raise Goodsheet::SheetNotFoundError
+    def select_sheet_options(idx)
+      if idx.is_a? Integer
+        @s_opts[idx]
+      elsif idx.is_a? String
+        @s_opts[@ss.sheets.index(idx)]
+      end
+    end
+
+    def check_sheet_exists(idx)
+      if idx.is_a? Integer
+        raise Goodsheet::SheetNotFoundError if idx < 0 || idx > (size-1)
+      elsif idx.is_a? String
+        raise Goodsheet::SheetNotFoundError if !@ss.sheets.include?(idx)
+      else
+        raise ArgumentError, "idx must be an Integer or a String"
       end
     end
 
@@ -117,14 +194,20 @@ module Goodsheet
       "CustRow_#{(Time.now.to_f*(10**10)).to_i}"
     end
 
-    def set_options(options)
-      @time_zone = options.delete(:zone) || "Rome"
-      @skip = options.delete(:skip) || 1
-      @header_row = options.delete(:header_row) || 0
-      @max_errors = options.delete(:max_errors) || 0
-      @row_limit = options.delete(:row_limit) || 0      
+    def set_current_sheet_options(options)
+      set_sheet_options(index, options)
+    end
+
+    def set_sheet_options(idx, options)
+      i = idx.is_a?(Integer) ? idx : @ss.sheets.index(idx)
+      @s_opts[i] = {
+        :skip => options[:skip] || @s_opts[i][:skip] || 1,
+        :header_row => options[:header_row] || @s_opts[i][:header_row] || 0,
+        :max_errors => options[:max_errors] || @s_opts[i][:max_errors] || 0,
+        :row_limit => options[:row_limit] || @s_opts[i][:row_limit] || 0,
+        :force_nil => options[:force_nil] || @s_opts[i][:force_nil] || nil
+      }
     end
   end
 end
-
 

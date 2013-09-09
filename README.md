@@ -33,7 +33,7 @@ res = ss.read do
 end
 
 res.valid? # => true
-res.values # => {:a => [1.0, 1.0, 1.4], :b => []}
+res.values # => {:a => [1.0, 1.0, 1.4], :b => [0.0, 3.7, 10.9]}
 ```
 
 By default:
@@ -42,9 +42,87 @@ By default:
 
 Pass your validation rules into the block passed to the read method, together with the column_names method that define the position (or index) and the name of the columns you want to read.
 
-### Advanced usage
+### More on usage
 
-to do
+You can select the desired sheet by index (starting from zero) or by name:
+```ruby
+ss = Goodsheet::Spreadsheet.new("my_data.xlsx")
+ss.sheet(2) # select the third sheet
+ss.sheet("Sheet4") # select the sheet named "Sheet4"
+```
+
+Get the number of sheets, and their names:
+```ruby
+ss.size # => 4
+ss.sheets # => ["Sheet1", "Sheet2", "Sheet3", "Sheet4"]
+```
+
+When you init a new spreadsheet, you select a sheet or you invoke +validate+ or +read+ method, you can pass an hash of options.
+```ruby
+ss = Goodsheet::Spreadsheet.new("my_data.xlsx", :skip => 1, :header_row => 0, :max_errors => 0, :row_limit => 0, :force_nil => nil )
+```
+These are the valid options with their default values:
+- +:skip+ allow to skip a desired number of lines when you read or validate a sheet 
+- with +:header_row+ you define the index of the header row
+- with +:max_errors+ you define the maximum number of errors after the validation break
+- with +:row_limit+ you define the maximum number of row you wanto to read or validate
+- with +:force_nil+ you can specify the value to set when a cell hold a nil value (is empty)
+
+As said you can use the same option when selecting a sheet
+```ruby
+ss.sheet(0, :skip => 2)
+```
+or read or validate a sheet:
+```ruby
+ss.validate(0, :force_nil => 0.0) do
+  # ...
+end
+```
+
+Get the content of header row:
+```ruby
+ss.header_row # => ["year", "month", "day"]
+```
+
+Get the number of rows:
+```ruby
+ss.total_rows # => all instanced rows
+ss.rows_wo_skipped # => except the skipped ones, aliased by +rows+ method
+```
+
+#### Reading and validate
+
+Use the +validate+ and +read+ methods to perform validation and reading. Note that the reading function include a validation call.
+Pass the previously seen +options+ hash and a block to +validate+/+read+ method.
+Inside the block you define columns names and indexes you want to validate/read using the +column_names+ method. You can use one of these 3 forms:
+- column_names :a => 0, :b => 1, :c => 3
+- column_names 0 => :a, 1 => :b, 3 => :c
+- column_names [:a, :b, nil, :c]
+
+Aside from define the columns settings, into block you define the validation rules. 
+Refer to the [official guide](http://guides.rubyonrails.org/active_record_validations.html) and [ROR Api](http://api.rubyonrails.org/classes/ActiveModel/Validations/ClassMethods.html)
+
+
+Some examples:
+```ruby
+ss = Goodsheet::Spreadsheet.new("my_data.xlsx")
+ss.sheet(1, :max_errors => 50, :force_nil => 0.0)
+res = ss.read do
+  column_names :item => 0, :qty => 1, :price => 2, :prod => 3
+  # same as: [:item, :qty, :price, :prod]
+  validates :item, :presence => true
+  validates :qty, :presence => true, :numericality => { :greater_than => 0.0}
+  validates :price, :presence => true, :numericality => { :greater_than => 0.0}
+  validate :product
+
+  def :product
+    if qty * price != prod
+      errors.add(:prod, "must be the product of qty and price")
+    end
+  end
+end
+```
+
 
 
 
