@@ -7,7 +7,7 @@ module Goodsheet
     end
     
     def to_s
-      "line #{@line} is invalid for the following reason(s): #{@val_err.full_messages.join(', ')}"
+      "Row #{@line} is invalid for the following reason(s): #{@val_err.full_messages.join(', ')}"
     end
   end
 end
