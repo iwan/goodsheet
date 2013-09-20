@@ -39,6 +39,7 @@ res.values # => {:a => [1.0, 1.0, 1.4], :b => [0.0, 3.7, 10.9]}
 By default:
 * the first sheet is selected
 * one line (the first) is skipped (i'm expeting that is the header line)
+* the content is returned as an hash of columns
 
 Pass your validation rules into the block passed to the read method, together with the column_names method that define the position (or index) and the name of the columns you want to read.
 
@@ -81,7 +82,7 @@ end
 
 Get the content of header row:
 ```ruby
-ss.header_row # => ["year", "month", "day"]
+ss.get_header # => ["year", "month", "day"]
 ```
 
 Get the number of rows:
@@ -94,16 +95,17 @@ ss.rows_wo_skipped # => except the skipped ones, aliased by `rows` method
 
 Use the `validate` and `read` methods to perform validation and reading. Note that the reading function include a validation call.
 Pass the previously seen `options` hash and a block to `validate`/`read` method.
-Inside the block you define columns names and indexes you want to validate/read using the `column_names` method. You can use one of these 3 forms:
+Inside the block you define columns names and indexes you want to validate/read using the `column_names` method. You can use one of these 4 forms:
 - `column_names :a => 0, :b => 1, :c => 3`
 - `column_names 0 => :a, 1 => :b, 3 => :c`
 - `column_names [:a, :b, nil, :c]`
+- `column_names :a, :b, nil, :c`
 
 Aside from define the columns settings, into block you define the validation rules. 
 Refer to the [official guide](http://guides.rubyonrails.org/active_record_validations.html) and [ROR Api](http://api.rubyonrails.org/classes/ActiveModel/Validations/ClassMethods.html)
 
 
-Some examples:
+Here another example:
 ```ruby
 ss = Goodsheet::Spreadsheet.new("my_data.xlsx")
 ss.sheet(1, :max_errors => 50, :force_nil => 0.0)
@@ -121,12 +123,49 @@ res = ss.read do
     end
   end
 end
+
+res.valid?
+```
+
+If validation fails you get `false` on `res.valid?` call, and you retrieve an array with errors by calling `errors` method on result object:
+If validation fails you can retrieve the errors array by calling `errors` method on result object:
+
+```ruby
+res.valid? # => false
+res.invalid? # => true
+res.errors # => a ValidationErrors object
+res.errors.size # => 1
+res.errors[0].to_s # => "Row 5 is invalid for the following reason(s): Year is not a number, Month is not a number"
+```
+
+If the validation ends successfully without errors, the result values are available using one of these three forms:
+- hash of columns (default)
+- array of rows, where the rows are array
+- array of rows, where the rows are hashes
+
+
+```
++------+-------+
+| year | month |
++------+-------+
+| 2012 |    1  |
++------+-------+
+| 2012 |    2  |
++------+-------+
+| 2012 |    3  |
++------+-------+
+```
+
+```ruby
+res.values # => { :year => [2012, 2012, 2012], :month => [1, 2, 3]}
+res.values(:columns) # same as the previous 
+res.values(:rows_array) # => [[2012, 1], [2012, 2], [2012, 3]]
+res.values(:rows_hash) # => [{:year => 2012, :month => 1}, {:year => 2012, :month => 2}, {:year => 2012, :month => 3}]
 ```
 
 
 
-
-Warning:
+Note:
 * integer numbers are converted to float numbers. Also don't pretend to obtain an integer in validation. This undesired behaviour depend on Roo gem
 * if you import data from a CSV spreadsheet keep in mind that numbers are readed as strings
 

@@ -4,7 +4,7 @@ module Goodsheet
 
   class Spreadsheet < Roo::Spreadsheet
     attr_reader :skip, :header_row, :max_errors, :row_limit
-    attr_reader :s_opts
+    attr_reader :s_opts, :ss
 
     # Initialize a Goodsheet object. The first sheet will be selected.
     #

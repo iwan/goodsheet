@@ -168,4 +168,26 @@ class TestSpreadsheet_01 < Test::Unit::TestCase
 
   end
 
+  def test_result_formats
+    result = @ss.read do
+      column_names :a, :b, :c, :d
+    end
+    y = { 
+      :a=>[2012.0, 2012.0, 2012.0, 2013.0], 
+      :b=>["F", "F", "G", "F"], 
+      :c=>[3.1, 2.5, 0.0, 0.78], 
+      :d=>[4.1, 3.5, 1.0, 1.78]
+    }
+    values_size = y.values.first.size
+
+    assert_equal(y, result.values)
+    assert_equal(y, result.values(:columns))
+
+    y = [[2012.0, "F", 3.1, 4.1], [2012.0, "F", 2.5, 3.5], [2012.0, "G", 0.0, 1.0], [2013.0, "F", 0.78, 1.78]]
+    assert_equal(y, result.values(:rows_array))
+
+    y = [{:a=>2012.0, :b=>"F", :c=>3.1, :d=>4.1}, {:a=>2012.0, :b=>"F", :c=>2.5, :d=>3.5}, {:a=>2012.0, :b=>"G", :c=>0.0, :d=>1.0}, {:a=>2013.0, :b=>"F", :c=>0.78, :d=>1.78}]
+    assert_equal(y, result.values(:rows_hash))
+  end
+
 end
