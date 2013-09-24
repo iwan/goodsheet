@@ -9,12 +9,12 @@ class TestSpreadsheet_01 < Test::Unit::TestCase
   end
 
   def test_sheets
-    assert_equal(%w(Sheet1 Sheet2 Sheet3 Sheet4), @ss.sheets)
+    assert_equal(%w(Sheet1 Sheet2 Sheet3 Sheet4 Sheet5), @ss.sheets)
   end
 
   def test_failed_sheet_selection
     assert_raise Goodsheet::SheetNotFoundError do
-      @ss.sheet(4)
+      @ss.sheet(14)
     end
     assert_raise Goodsheet::SheetNotFoundError do
       @ss.sheet("Sheet999")
@@ -36,6 +36,9 @@ class TestSpreadsheet_01 < Test::Unit::TestCase
 
     @ss.sheet(3)
     assert_equal("Sheet4", @ss.name)    
+
+    @ss.sheet(4)
+    assert_equal("Sheet5", @ss.name)    
   end
 
   def test_get_header_wo_options
@@ -105,7 +108,7 @@ class TestSpreadsheet_01 < Test::Unit::TestCase
   end
 
   def test_size
-    assert_equal(4, @ss.size)
+    assert_equal(5, @ss.size)
   end
 
   def test_options_precedence
@@ -126,6 +129,8 @@ class TestSpreadsheet_01 < Test::Unit::TestCase
     assert_equal({:skip=>1, :header_row=>0, :max_errors=>0, :row_limit=>0, :force_nil=>nil}, @ss.options)
   end
 
+
+
   def test_read_sheet4
     @ss.sheet(3)
 
@@ -135,11 +140,11 @@ class TestSpreadsheet_01 < Test::Unit::TestCase
       validates :price, :presence => true, :numericality => { :greater_than_or_equal_to => 0.0 }
       validates :tot, :presence => true, :numericality => { :greater_than_or_equal_to => 0.0 }      
     end
+    assert_equal([:qty, :price, :tot], result.values.keys)
     assert_equal(3, result.values.size)
     result.values.each do |k, vv|
       assert_equal(5, vv.size)
     end
-    assert_equal([:qty, :price, :tot], result.values.keys)
 
 
 
