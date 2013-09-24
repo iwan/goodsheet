@@ -16,13 +16,14 @@ module Goodsheet
       !valid?
     end
 
-    def add(attribute, row, force_nil=nil)
+    def add(attribute, row)
       attribute = attribute.to_sym
-      (@vv[attribute] ||= []) << (row.send(attribute) || force_nil)
+      (@vv[attribute] ||= []) << row.send(attribute)
     end
 
     def values(format=:columns)
-      values_size = @vv.values.first.size
+      values_size = 0
+      values_size = @vv.values.first.size if @vv.values.first
 
       case format
       when :columns
