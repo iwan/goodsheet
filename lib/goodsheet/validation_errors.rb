@@ -36,5 +36,9 @@ module Goodsheet
         yield(i)
       end
     end
+
+    def valid?
+      empty?
+    end
   end
 end
