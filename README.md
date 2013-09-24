@@ -24,24 +24,56 @@ Or install it yourself as:
 
 ### Getting started
 
-```ruby
-ss = Goodsheet::Spreadsheet.new("my_data.xlsx")
-res = ss.read do
-  column_names :a => 0, :b => 1
-  validates :a, :presence => true, :numericality => { :greater_than_or_equal_to => 0.0, :less_than_or_equal_to => 10 }
-  validates :b, :presence => true, :numericality => { :greater_than_or_equal_to => 0.0, :less_than_or_equal_to => 100 }
-end
+Given a spreadsheet:
+![Spreadsheet](https://github.com/iwan/goodsheet/tree/master/img/img_01.png)
 
+```ruby
+ss = Goodsheet::Spreadsheet.new("example.xls")
+res = ss.read do
+  column_names :filename => 0, :size => 1, :created_at => 3, :updated_at => 4 # ignore 'description' column
+  validates :filename, :presence => true
+  validates :size, :presence => true, :numericality => { :greater_than_or_equal_to => 0.0 }
+  validate :order_of_dates
+
+  def order_of_dates
+    if created_at > updated_at
+      errors.add(:updated_at, "cannot be before creation date")
+    end
+  end
+end
+```
+
+If validation is successfull the spreadsheet will be readed and his content retrieved:
+```ruby
 res.valid? # => true
-res.values # => {:a => [1.0, 1.0, 1.4], :b => [0.0, 3.7, 10.9]}
+res.values # => {:filename=>["img_01.jpg", "img_17.jpg", "img_56.jpg"], :size=>[123854.0, 278333.0, 529639.0], :created_at=>[#<Date: 2013-03-03 ((2456355j,0s,0n),+0s,2299161j)>, ...], ...}
+```
+
+Alternatively you can get the result values by rows:
+```ruby
+res.values(:rows_array) # => [["img_01.jpg", 123854.0, #<Date: 2013-03-03 ((2456355j,0s,0n),+0s,2299161j)>, #<Date: 2013-03-31 ((2456383j,0s,0n),+0s,2299161j)>], ["img_17.jpg", 278333.0, #<Date: 2013-05-03 ...], ...]
+
+res.values(:rows_hash) # => [{:filename=>"img_01.jpg", :size=>123854.0, :created_at=>#<Date: 2013-03-03 ((2456355j,0s,0n),+0s,2299161j)>, :updated_at=>#<Date: 2013-03-31 ((2456383j,0s,0n),+0s,2299161j)>}, {:filename=>"img_17.jpg", :size=>278333.0, ...}, ... ]
+```
+
+If validation fails the spreadsheet will not be readed:
+```ruby
+res.valid? # => false
+res.errors.size # => 1
+res.errors.to_a.first # => "Row 3 is invalid: Filename can't be blank"
+res.values # => {}
 ```
 
 By default:
 * the first sheet is selected
 * one line (the first) is skipped (i'm expeting that is the header line)
-* the content is returned as an hash of columns
 
-Pass your validation rules into the block passed to the read method, together with the column_names method that define the position (or index) and the name of the columns you want to read.
+You can also invoke `validate` instead of `read` method (see below).
+A validation will be always executed before the extraction (reading) of data. If validation fails the reading will not be performed.
+
+The definition of columns you want to read (through the `column_names` method) and the rules for validation are defined inside the block you pass to `read` or `validate` method.
+
+
 
 ### More on usage
 
@@ -58,16 +90,17 @@ ss.size # => 4
 ss.sheets # => ["Sheet1", "Sheet2", "Sheet3", "Sheet4"]
 ```
 
-When you init a new spreadsheet, you select a sheet or you invoke `validate` or `read` method, you can pass an hash of options.
+An hash of options can be passed to spreadsheet initializer `Goodsheet::Spreadsheet.new`, to `sheet` selection, to `validate` or `read` method. The first one define validation/reading rules for all sheets, but these can be overwritten by sheet and `validate`/`read`.
+
 ```ruby
 ss = Goodsheet::Spreadsheet.new("my_data.xlsx", :skip => 1, :header_row => 0, :max_errors => 0, :row_limit => 0, :force_nil => nil )
 ```
 These are the valid options with their default values:
-- `:skip` allow to skip a desired number of lines when you read or validate a sheet 
-- with `:header_row` you define the index of the header row
-- with `:max_errors` you define the maximum number of errors after the validation break
-- with `:row_limit` you define the maximum number of row you wanto to read or validate
-- with `:force_nil` you can specify the value to set when a cell hold a nil value (is empty)
+- `:skip` allow to skip a desired number of lines when you read or validate a sheet (1)
+- with `:header_row` you define the index of the header row (0)
+- with `:max_errors` you define the maximum number of errors after the validation break (0: no limit)
+- with `:row_limit` you define the maximum number of row you wanto to read or validate (0: no limit)
+- with `:force_nil` you can specify the value to set when a cell hold a nil value (is empty) (still nil)
 
 As said you can use the same option when selecting a sheet
 ```ruby
@@ -95,7 +128,7 @@ ss.rows_wo_skipped # => except the skipped ones, aliased by `rows` method
 
 Use the `validate` and `read` methods to perform validation and reading. Note that the reading function include a validation call.
 Pass the previously seen `options` hash and a block to `validate`/`read` method.
-Inside the block you define columns names and indexes you want to validate/read using the `column_names` method. You can use one of these 4 forms:
+Inside the block you define columns names and indexes you want to validate/read using the `column_names` method. You can use one of these 4 forms (and their effect is the same):
 - `column_names :a => 0, :b => 1, :c => 3`
 - `column_names 0 => :a, 1 => :b, 3 => :c`
 - `column_names [:a, :b, nil, :c]`
