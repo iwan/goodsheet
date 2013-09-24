@@ -12,10 +12,10 @@ module Goodsheet
     end
     @keys = {} # idx => key
 
-    def initialize(arr)
+    def initialize(arr, nil_value=nil)
       arr.each_with_index do |v, idx|
         if k = self.class.keys[idx]
-          send("#{k}=", v)       
+          send("#{k}=", v || nil_value)       
         end
       end
       super()
