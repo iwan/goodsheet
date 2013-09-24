@@ -25,7 +25,7 @@ Or install it yourself as:
 ### Getting started
 
 Given a spreadsheet:
-![Spreadsheet](https://github.com/iwan/goodsheet/tree/master/img/img_01.png)
+![Spreadsheet](https://raw.github.com/iwan/goodsheet/master/img/img_01.png)
 
 ```ruby
 ss = Goodsheet::Spreadsheet.new("example.xls")
