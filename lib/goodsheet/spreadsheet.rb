@@ -110,20 +110,18 @@ module Goodsheet
     # @yield Column settings and validation rules
     # @return [ValidationErrors] Validation errors
     def validate(options={}, &block)
-      # set_current_sheet_options(options)
       skip = options[:skip] || @s_opts[index][:skip]
       header_row = options[:header_row] || @s_opts[index][:header_row]
       max_errors = options[:max_errors] || @s_opts[index][:max_errors]
       row_limit = options[:row_limit] || @s_opts[index][:row_limit]
       force_nil = options[:force_nil] || @s_opts[index][:force_nil]
-
       validation_errors = ValidationErrors.new
 
       my_class = options[:my_custom_row_class] || build_my_class(block)
 
       line = @s_opts[index][:skip] # 0-based, from the top
       @ss.parse[@s_opts[index][:skip]..-1].each do |row| # row is an array of elements
-        validation_errors.add(line, my_class.new(row))
+        validation_errors.add(line, my_class.new(row, force_nil))
         break if max_errors>0 && validation_errors.size >= max_errors
         break if row_limit && row_limit>0 && line>=(row_limit+@s_opts[index][:skip]-1)
         line +=1
@@ -157,7 +155,7 @@ module Goodsheet
       line = skip # 0-based, from the top
       @ss.parse[skip..-1].each do |row| # row is an array of elements
         my_class.row_attributes.each do |attribute|
-          read_result.add(attribute, my_class.new(row), force_nil)
+          read_result.add(attribute, my_class.new(row, force_nil))
         end
         break if row_limit && row_limit>0 && line>=(row_limit + skip - 1)
         line +=1
@@ -169,7 +167,8 @@ module Goodsheet
     private
 
     def build_my_class(block)
-      Object.const_set get_custom_row_class_name, Row.inherit(block)
+      n = get_custom_row_class_name
+      Object.const_set n, Row.inherit(block)
     end
 
     def select_sheet_options(idx)
@@ -192,10 +191,6 @@ module Goodsheet
 
     def get_custom_row_class_name
       "CustRow_#{(Time.now.to_f*(10**10)).to_i}"
-    end
-
-    def set_current_sheet_options(options)
-      set_sheet_options(index, options)
     end
 
     def set_sheet_options(idx, options)
