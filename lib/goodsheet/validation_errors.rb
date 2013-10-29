@@ -1,40 +1,18 @@
 module Goodsheet
 
-  class ValidationErrors
-    attr_reader :array
+  class ValidationErrors < Array
 
-    def initialize
-      @array = []
+    def initialize(limit=0)
+      @max_size = (limit==0 || limit.nil?) ? Float::INFINITY : limit
     end
 
+    # Add a potential error (will be added only if the row is not valid)
+    #
+    # @param line_number [Fixnum] Line number (0-based). 
+    # @return [boolean] Return false if the limit has been reached, true otherwise.
     def add(line_number, row)
-      @array << ValidationError.new(line_number+1, row.errors) if row.invalid?
-    end
-
-    def empty?
-      @array.empty?
-    end
-
-    def size
-      @array.size
-    end
-
-    def to_s
-      @array.to_s
-    end
-
-    def [](i)
-      @array[i]
-    end
-    
-    def to_a
-      @array
-    end
-
-    def each(&block)
-      @array.each do |i|
-        yield(i)
-      end
+      self << ValidationError.new(line_number+1, row.errors) if row.invalid?
+      self.size < @max_size
     end
 
     def valid?

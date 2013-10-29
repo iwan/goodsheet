@@ -110,23 +110,15 @@ module Goodsheet
     # @yield Column settings and validation rules
     # @return [ValidationErrors] Validation errors
     def validate(options={}, &block)
-      skip = options[:skip] || @s_opts[index][:skip]
-      header_row = options[:header_row] || @s_opts[index][:header_row]
-      max_errors = options[:max_errors] || @s_opts[index][:max_errors]
-      row_limit = options[:row_limit] || @s_opts[index][:row_limit]
-      force_nil = options[:force_nil] || @s_opts[index][:force_nil]
-      validation_errors = ValidationErrors.new
+      set_variables(options)
+      errors = ValidationErrors.new(@max_errors)
+      row_class = Row.extend_with(block)
 
-      my_class = options[:my_custom_row_class] || build_my_class(block)
-
-      line = @s_opts[index][:skip] # 0-based, from the top
-      @ss.parse[@s_opts[index][:skip]..-1].each do |row| # row is an array of elements
-        validation_errors.add(line, my_class.new(row, force_nil))
-        break if max_errors>0 && validation_errors.size >= max_errors
-        break if row_limit && row_limit>0 && line>=(row_limit+@s_opts[index][:skip]-1)
-        line +=1
+      last_row = @row_limit.zero? ? @ss.last_row : min(@ss.last_row, @row_limit+@skip)
+      (@skip+1).upto(last_row) do |r|
+        break unless errors.add(r, row_class.new(@ss.row(r), @force_nil))
       end
-      validation_errors
+      errors
     end
 
 
@@ -141,24 +133,13 @@ module Goodsheet
     # @yield Column settings and validation rules
     # @return [ReadResult] The result
     def read(options={}, &block)
-      skip = options[:skip] || @s_opts[index][:skip]
-      header_row = options[:header_row] || @s_opts[index][:header_row]
-      max_errors = options[:max_errors] || @s_opts[index][:max_errors]
-      row_limit = options[:row_limit] || @s_opts[index][:row_limit]
-      force_nil = options[:force_nil] || @s_opts[index][:force_nil]
+      set_variables(options)
+      row_class = Row.extend_with(block)
+      read_result = ReadResult.new(row_class.attributes, @max_errors, options[:collector]||:a_arr)
 
-      my_class = build_my_class(block)
-      options[:my_custom_row_class] = my_class
-      read_result = ReadResult.new(validate(options){ block })
-      return read_result if read_result.invalid?
-        
-      line = skip # 0-based, from the top
-      @ss.parse[skip..-1].each do |row| # row is an array of elements
-        my_class.row_attributes.each do |attribute|
-          read_result.add(attribute, my_class.new(row, force_nil))
-        end
-        break if row_limit && row_limit>0 && line>=(row_limit + skip - 1)
-        line +=1
+      last_row = @row_limit.zero? ? @ss.last_row : min(@ss.last_row, @row_limit+@skip)
+      (@skip+1).upto(last_row) do |r|
+        break unless read_result.add(r, row_class.new(@ss.row(r), @force_nil))
       end
       read_result
     end   
@@ -166,9 +147,14 @@ module Goodsheet
 
     private
 
-    def build_my_class(block)
-      n = get_custom_row_class_name
-      Object.const_set n, Row.inherit(block)
+
+
+    def set_variables(options)
+      @skip = options[:skip] || @s_opts[index][:skip]
+      @header_row = options[:header_row] || @s_opts[index][:header_row]
+      @max_errors = options[:max_errors] || @s_opts[index][:max_errors]
+      @row_limit = options[:row_limit] || @s_opts[index][:row_limit] || 0
+      @force_nil = options[:force_nil] || @s_opts[index][:force_nil]
     end
 
     def select_sheet_options(idx)
@@ -189,9 +175,6 @@ module Goodsheet
       end
     end
 
-    def get_custom_row_class_name
-      "CustRow_#{(Time.now.to_f*(10**10)).to_i}"
-    end
 
     def set_sheet_options(idx, options)
       i = idx.is_a?(Integer) ? idx : @ss.sheets.index(idx)
@@ -202,6 +185,10 @@ module Goodsheet
         :row_limit => options[:row_limit] || @s_opts[i][:row_limit] || 0,
         :force_nil => options[:force_nil] || @s_opts[i][:force_nil] || nil
       }
+    end
+
+    def min(a,b)
+      a<b ? a : b
     end
   end
 end

@@ -1,4 +1,5 @@
 require "goodsheet/version"
+require "goodsheet/aux"
 
 module Goodsheet
   autoload :Row,                'goodsheet/row'

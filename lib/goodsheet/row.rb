@@ -4,18 +4,21 @@ module Goodsheet
   
   class Row
     include ActiveModel::Validations
-    include ActiveModel::Conversion
-    extend ActiveModel::Naming
 
     class << self
-      attr_accessor :keys
+      attr_accessor :keys, :defaults
     end
-    @keys = {} # idx => key
+    # @keys = {} # idx => key: {0=>:name, 1=>:quantity, 2=>:price, 3=>:total, 6=>:password}
+    # @defaults = {} # name => default_value
 
     def initialize(arr, nil_value=nil)
+      # puts "--- arr: #{arr.inspect}"
+      if (diff=self.class.keys.size-arr.size)>0
+        arr = arr + Array.new(diff, nil)
+      end
       arr.each_with_index do |v, idx|
         if k = self.class.keys[idx]
-          send("#{k}=", v || nil_value)       
+          send "#{k}=", v || self.class.defaults[k] || nil_value     
         end
       end
       super()
@@ -23,11 +26,29 @@ module Goodsheet
 
     def self.inherit(block)
       c = Class.new(self) do
-        @keys = {} # idx => key
+        @keys = {} # idx => key: {0=>:name, 1=>:quantity, 2=>:price, 3=>:total, 6=>:password}
+        @defaults = {} # name => default_value
       end
       c.class_eval(&block)
       c
     end
+
+    # using indexes: defaults 1 => 0.0, 2 => ""
+    # using names:   defaults :qty => 0.0, :name => ""
+
+    def self.column_defaults(*attr)
+      raise ArgumentError, 'You have to pass at least one attribute' if attr.empty?
+      if attr[0].is_a? Array
+        @defaults = Hash[attr[0].map.with_index{|v, i| [self.keys[i], v]}]
+
+      elsif attr[0].is_a? Hash
+        @defaults = Hash[attr[0].to_a.collect{|a| [(a[0].is_a?(Fixnum)) ? (self.keys[a[0]]) : a[0], a[1]]}]
+
+      else
+        @defaults = Hash[attr.map.with_index{|v, i| [self.keys[i], v]}]
+      end
+    end
+
 
     # Define the position (or index) and the name of columns.
     # You have four ways to define them: 
@@ -42,22 +63,25 @@ module Goodsheet
       raise ArgumentError, 'You have to pass at least one attribute' if attr.empty?
       if attr[0].is_a? Array
         attr[0].each_with_index do |name, idx|
-          if name
-            self.keys[idx] = name
-            attr_accessor name        
-          end
+          self.set_key_pair(idx, name) if name
+          # if name
+          #   self.keys[idx] = name
+          #   attr_accessor name        
+          # end
         end
         
       elsif attr[0].is_a? Hash
         if attr[0].first[0].is_a? Integer
           attr[0].each do |idx, name|
-            self.keys[idx] = name
-            attr_accessor name
+            self.set_key_pair(idx, name)
+            # self.keys[idx] = name
+            # attr_accessor name
           end
         else
           attr[0].each do |name, idx|
-            self.keys[idx] = name
-            attr_accessor name
+            self.set_key_pair(idx, name)
+            # self.keys[idx] = name
+            # attr_accessor name
           end
         end
 
@@ -65,8 +89,9 @@ module Goodsheet
         attr.each_with_index do |name, idx|
           if name
             name = name.to_s.gsub(" ", "_").to_sym unless name.is_a? Symbol
-            self.keys[idx] = name
-            attr_accessor name        
+            self.set_key_pair(idx, name)
+            # self.keys[idx] = name
+            # attr_accessor name        
           end
         end
       end
@@ -74,13 +99,47 @@ module Goodsheet
     end
 
 
-    def persisted?
-      false
+    def self.set_key_pair(idx, name)
+      self.keys[idx] = name
+      attr_accessor name        
     end
 
+
+    # def persisted?
+    #   false
+    # end
+
     # Get the list of attributes (the columns to import)
-    def self.row_attributes
+    def Row.attributes
       @keys.values
+    end
+
+    def attributes
+      self.class.attributes
+    end
+
+    def Row.extend_with(block)
+      class_name = "CustRow_#{(Time.now.to_f*(10**10)).to_i}"
+      Object.const_set class_name, Row.inherit(block)
+    end
+
+    def to_hash
+      Hash[self.class.attributes.map{|a| [a, self.send(a)]}]
+    end
+
+    def to_a
+      self.class.attributes.map{|a| self.send(a)}
     end
   end
 end
+
+# class Row01 < Goodsheet::Row
+#   column_names :filename => 0, :size => 1
+#   validates :size, :numericality => true
+# end
+
+# r = Row01.new(["pippo", "e"])
+# p r.valid?
+# puts r.class.attributes.inspect
+# puts r.to_hash.inspect
+# puts r.to_a.inspect
