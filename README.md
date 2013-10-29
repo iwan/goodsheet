@@ -30,7 +30,8 @@ Given a spreadsheet:
 ```ruby
 ss = Goodsheet::Spreadsheet.new("example.xls")
 res = ss.read do
-  column_names :filename => 0, :size => 1, :created_at => 3, :updated_at => 4 # ignore 'description' column
+  column_names :filename => 0, :size => 1, :created_at => 3, :updated_at => 4 # i want to ignore 'description' column
+  column_defaults :filename => "UNKNOWN"
   validates :filename, :presence => true
   validates :size, :presence => true, :numericality => { :greater_than_or_equal_to => 0.0 }
   validate :order_of_dates
@@ -126,13 +127,20 @@ ss.rows_wo_skipped # => except the skipped ones, aliased by `rows` method
 
 #### Reading and validate
 
-Use the `validate` and `read` methods to perform validation and reading. Note that the reading function include a validation call.
+Use the `validate` and `read` methods to perform validation and reading. Note that the reading function include the validation step.
 Pass the previously seen `options` hash and a block to `validate`/`read` method.
-Inside the block you define columns names and indexes you want to validate/read using the `column_names` method. You can use one of these 4 forms (and their effect is the same):
+Inside the block you define columns names and indexes you want to validate/read using the `column_names` method. You can use one of these 4 forms (and their effect is identical):
 - `column_names :a => 0, :b => 1, :c => 3`
 - `column_names 0 => :a, 1 => :b, 3 => :c`
 - `column_names [:a, :b, nil, :c]`
 - `column_names :a, :b, nil, :c`
+
+Use the `column_defaults` method to specify the value to set when the corresponding cell hold a nil value (is empty). Like the previous method, the following forms are identical:
+- `column_defaults :a => 0.0, :b => 0.0, :c => "UNKNOWN"`
+- `column_defaults 0 => 0.0, 1 => 0.0, 3 => "UNKNOWN"`
+- `column_defaults [0.0, 0.0, "UNKNOWN"]`
+- `column_defaults 0.0, 0.0, "UNKNOWN"`
+The `column_defaults` macro overwrite the read/validate `:force_nil` option.
 
 Aside from define the columns settings, into block you define the validation rules. 
 Refer to the [official guide](http://guides.rubyonrails.org/active_record_validations.html) and [ROR Api](http://api.rubyonrails.org/classes/ActiveModel/Validations/ClassMethods.html)
