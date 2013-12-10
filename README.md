@@ -140,6 +140,7 @@ Use the `column_defaults` method to specify the value to set when the correspond
 - `column_defaults 0 => 0.0, 1 => 0.0, 3 => "UNKNOWN"`
 - `column_defaults [0.0, 0.0, "UNKNOWN"]`
 - `column_defaults 0.0, 0.0, "UNKNOWN"`
+
 The `column_defaults` macro overwrite the read/validate `:force_nil` option.
 
 Aside from define the columns settings, into block you define the validation rules. 
