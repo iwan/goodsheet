@@ -40,5 +40,13 @@ module Spreadsheet
       end
       read_result
     end
+
+
+    def get_header(options={})
+      settings = Goodsheet::ReadingSettings.new(options)
+      row(settings.header_row).to_a
+      # row(settings.header_row+1) # because roo in 1-based
+    end
+
   end
 end
