@@ -6,7 +6,7 @@ module Goodsheet
     include ActiveModel::Validations
 
     class << self
-      attr_accessor :keys, :defaults
+      attr_accessor :keys, :defaults, :defaults_attributes
     end
     # @keys = {} # idx => key: {0=>:name, 1=>:quantity, 2=>:price, 3=>:total, 6=>:password}
     # @defaults = {} # name => default_value
@@ -28,6 +28,7 @@ module Goodsheet
       c = Class.new(self) do
         @keys = {} # idx => key: {0=>:name, 1=>:quantity, 2=>:price, 3=>:total, 6=>:password}
         @defaults = {} # name => default_value
+        @defaults_attributes = nil # name => default_value
       end
       c.class_eval(&block)
       c
@@ -35,16 +36,29 @@ module Goodsheet
 
     # using indexes: defaults 1 => 0.0, 2 => ""
     # using names:   defaults :qty => 0.0, :name => ""
-
     def self.column_defaults(*attr)
       raise ArgumentError, 'You have to pass at least one attribute' if attr.empty?
-      if attr[0].is_a? Array
+      if self.keys.empty?
+        self.defaults_attributes = attr
+      else
+        self.defaults_attributes = nil
+        self.set_defaults(attr)
+      end
+    end
+
+    def self.set_defaults(attr)
+      if attr[0].is_a? Array # column_defaults [0.0, nil, "Unknown"]
+        # @defaults = Hash[attr[0].map.with_index{|v, i| [self.keys[i], v]}]
         @defaults = Hash[attr[0].map.with_index{|v, i| [self.keys[i], v]}]
 
-      elsif attr[0].is_a? Hash
+      elsif attr[0].is_a? Hash # column_defaults 0 => 0.0, 1 => nil, 2 => "Unknown"
+         # --or-- column_defaults :size => 0.0, :weight => nil, :name => "Unknown"
+
+        # @defaults = Hash[attr[0].to_a.collect{|a| [(a[0].is_a?(Fixnum)) ? (self.keys[a[0]]) : a[0], a[1]]}]
         @defaults = Hash[attr[0].to_a.collect{|a| [(a[0].is_a?(Fixnum)) ? (self.keys[a[0]]) : a[0], a[1]]}]
 
-      else
+      else # column_defaults 0.0, nil, "Unknown"
+        # @defaults = Hash[attr.map.with_index{|v, i| [self.keys[i], v]}]
         @defaults = Hash[attr.map.with_index{|v, i| [self.keys[i], v]}]
       end
     end
@@ -58,30 +72,21 @@ module Goodsheet
     # at the position, or simply put the list of names.
     # The positions are 0-based.
     def self.column_names(*attr)
-    # def self.column_names(param)
       @keys = {}
       raise ArgumentError, 'You have to pass at least one attribute' if attr.empty?
       if attr[0].is_a? Array
         attr[0].each_with_index do |name, idx|
           self.set_key_pair(idx, name) if name
-          # if name
-          #   self.keys[idx] = name
-          #   attr_accessor name        
-          # end
         end
         
       elsif attr[0].is_a? Hash
         if attr[0].first[0].is_a? Integer
           attr[0].each do |idx, name|
             self.set_key_pair(idx, name)
-            # self.keys[idx] = name
-            # attr_accessor name
           end
         else
           attr[0].each do |name, idx|
             self.set_key_pair(idx, name)
-            # self.keys[idx] = name
-            # attr_accessor name
           end
         end
 
@@ -90,12 +95,13 @@ module Goodsheet
           if name
             name = name.to_s.gsub(" ", "_").to_sym unless name.is_a? Symbol
             self.set_key_pair(idx, name)
-            # self.keys[idx] = name
-            # attr_accessor name        
           end
         end
       end
 
+      if !self.defaults_attributes.nil?
+        self.set_defaults(self.defaults_attributes)
+      end
     end
 
 
