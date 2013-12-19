@@ -33,6 +33,7 @@ class Roo::Base
     # @yield Column settings and validation rules
     # @return [ReadResult] The result
   def read(options={}, &block)
+    puts "roo read called"
     row_class, read_result, errors = init(options, &block)
 
     last_line = @settings.last_line(last_row)
