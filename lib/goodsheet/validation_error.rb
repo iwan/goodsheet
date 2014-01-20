@@ -3,7 +3,7 @@ module Goodsheet
   class ValidationError
     
     def initialize(line, val_err)
-      @line = line
+      @line    = line
       @val_err = val_err.full_messages.join(', ')
     end
     

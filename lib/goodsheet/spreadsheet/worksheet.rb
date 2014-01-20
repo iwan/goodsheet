@@ -37,6 +37,7 @@ module Spreadsheet
       row_class, read_result, errors = init(options, &block)
       
       each_with_index(@settings.skip) do |row, i|
+        row = row.collect{|cell| (cell.is_a? Spreadsheet::Formula) ? cell.value : cell }
         break if @settings.last?(i+@settings.skip) || !read_result.add(i+@settings.skip, row_class.new(row, @settings.force_nil))
       end
       read_result
