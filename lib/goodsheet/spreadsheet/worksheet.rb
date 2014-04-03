@@ -33,7 +33,6 @@ module Spreadsheet
     # @yield Column settings and validation rules
     # @return [ReadResult] The result
     def read(options={}, &block)
-      puts "spreadsheet read called"
       row_class, read_result, errors = init(options, &block)
       
       each_with_index(@settings.skip) do |row, i|
