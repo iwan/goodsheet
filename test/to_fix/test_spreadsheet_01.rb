@@ -5,7 +5,7 @@ class TestSpreadsheet_01 < Test::Unit::TestCase
 
   def setup
     filepath = File.dirname(__FILE__) + "/fixtures/ss_01.xls"
-    @ss = Goodsheet::Spreadsheet.new(filepath)
+    @ss = Spreadsheet.new(filepath)
   end
 
   def test_sheets

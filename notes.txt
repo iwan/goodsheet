@@ -1,3 +1,5 @@
+# https://github.com/zdavatz/spreadsheet
+
 
 Usage:
 
@@ -65,4 +67,19 @@ The :force_nil option allow to force empties cells to a value, and the :skip to 
 values = @ss.read(:force_nil => 0.0, :skip => 6) do |row|
   MyRow.new(:year => row[0])
 end
+
+
+Test a single test file:
+rake test TEST=test/test_defaults.rb
+L3lIrj
+
+
+Tests:
+rake test TEST=test/test_defaults.rb   # OOOKK! committa
+rake test TEST=test/test_enel.rb       # OOOKK!
+rake test TEST=test/test_example_2.rb  # OOOKK!
+rake test TEST=test/test_roo.rb        # OOOKK!
+rake test TEST=test/test_budella.rb        # OOOKK!
+
+bundle exec rake test TEST=test/test_budella.rb        # OOOKK!
 

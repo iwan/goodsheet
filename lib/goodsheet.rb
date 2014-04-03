@@ -7,6 +7,7 @@ require 'roo'
     aux
     reading_settings
     spreadsheet/worksheet
+    spreadsheet/workbook
     roo/base
     row
     exceptions

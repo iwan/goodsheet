@@ -4,7 +4,7 @@ module Goodsheet
 
   class Spreadsheet < Roo::Spreadsheet
     attr_reader :skip, :header_row, :max_errors, :row_limit
-    attr_reader :s_opts, :ss
+    attr_reader :s_opts, :ss, :no_roo
 
     # Initialize a Goodsheet object. The first sheet will be selected.
     #
@@ -18,7 +18,12 @@ module Goodsheet
     def initialize(filename, options={})
       # set_book_options(options)
       @filename = filename
-      @ss = Roo::Spreadsheet.open(filename, options)
+      if get_extension==".xls"
+        # use Spreadsheet gem
+      else
+        # use Roo gem
+        @ss = Roo::Spreadsheet.open(filename, options)
+      end
       @s_opts = Array.new(size, {})
       size.times do |i|
         set_sheet_options(i, options)
@@ -147,6 +152,9 @@ module Goodsheet
 
     private
 
+    def get_extension(file)
+      File.extname(URI.parse(file).path)
+    end
 
 
     def set_variables(options)
