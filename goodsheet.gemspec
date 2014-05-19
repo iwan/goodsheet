@@ -24,7 +24,7 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "rake"
 
   spec.add_dependency('minitest')
-  spec.add_dependency('roo', '~> 1.12.1') # https://github.com/Empact/roo
+  spec.add_dependency('roo', '~> 1.13.0') # https://github.com/Empact/roo
   spec.add_dependency('spreadsheet', '~> 0.9.6') # https://github.com/zdavatz/spreadsheet
   spec.add_dependency('activemodel', '~> 3.2')
   spec.add_dependency('google_drive')
