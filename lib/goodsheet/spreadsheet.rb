@@ -152,8 +152,11 @@ module Goodsheet
 
     private
 
-    def get_extension(file)
-      File.extname(URI.parse(file).path)
+    # def get_extension(file)
+    #   File.extname(URI.parse(file).path)
+    # end
+    def get_extension
+      File.extname(URI.parse(@filename).path)
     end
 
 
