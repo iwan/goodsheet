@@ -69,16 +69,17 @@ class TestFormats < Test::Unit::TestCase
   def test_validation_for_roo_format_csv
     ss = Roo::Spreadsheet.open(get_filepath("ss_02.csv"))
     ss.sheet(0)
-    errors = ss.validate(@options, &@rules_for_cvs) 
+    errors = ss.validate(@options, &rules_for_cvs) 
     assert_equal(0, errors.size)
   end
 
   # Test use of Roo gem
   # with cvs format all numbers are readed as string values
   def test_reading_for_roo_format_csv
-    ss = Roo::Spreadsheet.open(get_filepath("ss_02.csv"))
+    # ss = Roo::Spreadsheet.open(get_filepath("ss_02.csv"))
+    ss = Roo::CSV.new(get_filepath("ss_02.csv"))
     ss.sheet(0)
-    result = ss.read(@options, &@rules_for_cvs)
+    result = ss.read(@options, &rules_for_cvs)
     assert_equal(0, result.errors.size) 
     assert_equal(6, result.values.size)
     result.values.each do |k, v|
@@ -137,22 +138,16 @@ class TestFormats < Test::Unit::TestCase
     end  
   end
 
-
-
-  def validate(filepath)
-    ss = Goodsheet::Spreadsheet.new(filepath)
-    ss.sheet(0)
-    errors = ss.validate(@options) do
+  def rules_for_cvs
+    proc do
       column_names 0 => :year, 1 => :month, 2 => :day, 3 => :wday, 4 => :num, 5 => :v
       validates :year, :allow_nil => false, :numericality => { :greater_than_or_equal_to => 2000, :less_than_or_equal_to => 2020 }
       validates :month, :allow_nil => false, :numericality => { :greater_than_or_equal_to => 1, :less_than_or_equal_to => 12 }
       validates :day, :allow_nil => false, :numericality => { :greater_than_or_equal_to => 1, :less_than_or_equal_to => 31 }
       validates :wday, inclusion: { in:  %w(Mon Tue Wed Thu Fri Sat Sun) }
-      validates :num, inclusion: { in:  [1, 2, 3] }
+      validates :num, inclusion: { in:  [1, 2, 3].map(&:to_s) }
       validates :v, :allow_nil => false, :numericality => { :greater_than_or_equal_to => 0.0, :less_than_or_equal_to => 100.0 }
     end
-
-    assert_equal(0, errors.size)  
   end
 
 end
